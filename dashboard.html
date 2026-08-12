@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Security Dashboard</h2>
+  <div class="panels">
+    <section class="panel">
+      <h3>URL security scan</h3>
+      <form action="/scan" method="post" class="scan-form">
+        <input type="hidden" name="scan_type" value="url" />
+        <label for="target-url">Website URL</label>
+        <input id="target-url" name="target" type="text" placeholder="example.com or https://example.com" required />
+        <button type="submit">Scan URL</button>
+      </form>
+    </section>
+    <section class="panel">
+      <h3>HTML scan</h3>
+      <form action="/scan" method="post" class="scan-form">
+        <input type="hidden" name="scan_type" value="html" />
+        <label for="target-html">HTML snippet</label>
+        <textarea id="target-html" name="target" rows="7" placeholder="Paste HTML to analyze"></textarea>
+        <button type="submit">Analyze HTML</button>
+      </form>
+    </section>
+    <section class="panel">
+      <h3>Password check</h3>
+      <form action="/scan" method="post" class="scan-form">
+        <input type="hidden" name="scan_type" value="password" />
+        <label for="target-password">Password</label>
+        <input id="target-password" name="target" type="password" placeholder="Enter a password" required />
+        <button type="submit">Evaluate Password</button>
+      </form>
+    </section>
+  </div>
+  <p><a href="/logout">Logout</a></p>
+{% endblock %}

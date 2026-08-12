@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Scan Results</h2>
+  <p>Scan type: <strong>{{ scan_type }}</strong></p>
+  <p>Target: <strong>{{ target or "(none)" }}</strong></p>
+
+  <div class="results">
+    {% if scan_type == "password" %}
+      <p>Rating: <strong>{{ details.rating }}</strong></p>
+      <p>Score: <strong>{{ details.score }}</strong></p>
+      <ul>
+        {% for message in details.messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <ul>
+        {% for finding in details.findings %}
+          <li>{{ finding }}</li>
+        {% endfor %}
+      </ul>
+      {% if details.headers %}
+        <h3>Headers</h3>
+        <dl>
+          {% for header, value in details.headers.items() %}
+            <dt>{{ header }}</dt>
+            <dd>{{ value }}</dd>
+          {% endfor %}
+        </dl>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <p><a href="/dashboard">Back to dashboard</a></p>
+{% endblock %}
