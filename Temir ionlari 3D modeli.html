@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Temir ionlari 3D modeli</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#0b1020;--fg:#e8ecf5;--card:#151c33;--acc:#ff8a3d}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#c:active{cursor:grabbing}
+.panel{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-width:560px;margin:auto;background:var(--card);border:1px solid #2a3558;border-radius:14px;padding:12px 14px}
+h1{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:14px;margin:0;font-size:18px}
+#info{position:fixed;top:calc(40px + env(safe-area-inset-top,0px));left:14px;font-size:13px;opacity:.85;line-height:1.5}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{background:#222c4d;color:var(--fg);border:1px solid #34406b;border-radius:10px;padding:8px 14px;font-size:14px;cursor:pointer}
+button.on{background:var(--acc);color:#1b1206;border-color:var(--acc);font-weight:600}
+label{font-size:13px;display:flex;gap:8px;align-items:center;flex:1;min-width:160px}
+input[type=range]{flex:1}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<h1>Temir ionlari 3D modeli</h1>
+<div id="info"></div>
+<div class="panel">
+  <div class="row" style="margin-bottom:10px">
+    <button id="b2" class="on">Fe²⁺</button>
+    <button id="b3">Fe³⁺</button>
+    <button id="auto" class="on">360° aylanish: yoqilgan</button>
+  </div>
+  <div class="row">
+    <label>Tezlik <input id="sp" type="range" min="4" max="30" value="12"> <span id="spv">12 s</span></label>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b1020);
+const camera = new THREE.PerspectiveCamera(50,1,0.1,100);
+camera.position.set(0,0,9);
+scene.add(new THREE.AmbientLight(0xffffff,0.55));
+const dl = new THREE.DirectionalLight(0xffffff,0.9); dl.position.set(5,6,8); scene.add(dl);
+
+const root = new THREE.Group(); scene.add(root);
+let ion = null, shells = [];
+
+// Fe²⁺: 2,8,14 (24 e⁻) | Fe³⁺: 2,8,13 (23 e⁻); yadro: 26 proton
+const IONS = {
+  2:{name:'Fe²⁺ (ikki valentli temir)', shells:[2,8,14], color:0x4fd18b, e:24},
+  3:{name:'Fe³⁺ (uch valentli temir)',  shells:[2,8,13], color:0xff6b5b, e:23}
+};
+const radii=[1.5,2.4,3.3];
+
+function fib(n,r){ // sfera sirtida bir tekis nuqtalar
+  const pts=[], g=Math.PI*(3-Math.sqrt(5));
+  for(let i=0;i<n;i++){
+    const y=n===1?0:1-(i/(n-1))*2, rr=Math.sqrt(1-y*y), t=g*i;
+    pts.push(new THREE.Vector3(Math.cos(t)*rr*r,y*r,Math.sin(t)*rr*r));
+  }
+  return pts;
+}
+
+function build(k){
+  if(ion) root.remove(ion);
+  ion = new THREE.Group(); shells=[];
+  const d = IONS[k];
+  // yadro: 26 proton + 30 neytron (taxminiy ko'rinish)
+  const nuc = new THREE.Mesh(new THREE.SphereGeometry(0.75,48,32),
+    new THREE.MeshStandardMaterial({color:0xff8a3d,metalness:.3,roughness:.4,emissive:0x552200}));
+  ion.add(nuc);
+  d.shells.forEach((n,i)=>{
+    const g = new THREE.Group();
+    const r = radii[i];
+    g.add(new THREE.Mesh(new THREE.SphereGeometry(r,32,20),
+      new THREE.MeshBasicMaterial({color:d.color,wireframe:true,transparent:true,opacity:.12})));
+    const em = new THREE.MeshStandardMaterial({color:d.color,emissive:d.color,emissiveIntensity:.5,roughness:.3});
+    fib(n,r).forEach(p=>{
+      const e = new THREE.Mesh(new THREE.SphereGeometry(0.17,16,12),em);
+      e.position.copy(p); g.add(e);
+    });
+    g.userData.axis = new THREE.Vector3(Math.sin(i*2+1),Math.cos(i*3+1),Math.sin(i+2)).normalize();
+    g.userData.w = 0.5/(i+1)*(i%2?-1:1);
+    ion.add(g); shells.push(g);
+  });
+  root.add(ion);
+  document.getElementById('info').innerHTML =
+    '<b>'+d.name+'</b><br>Yadro: 26 proton<br>Elektronlar: '+d.e+' ta<br>Qobiqlar: '+d.shells.join(' + ')+' (1s, 2s2p, 3s3p3d…)';
+}
+build(2);
+
+// tugmalar
+const b2=document.getElementById('b2'), b3=document.getElementById('b3'), ab=document.getElementById('auto');
+b2.onclick=()=>{build(2);b2.classList.add('on');b3.classList.remove('on')};
+b3.onclick=()=>{build(3);b3.classList.add('on');b2.classList.remove('on')};
+let auto=true, period=12;
+ab.onclick=()=>{auto=!auto;ab.classList.toggle('on',auto);ab.textContent='360° aylanish: '+(auto?'yoqilgan':'o\'chirilgan')};
+const sp=document.getElementById('sp');
+sp.oninput=()=>{period=+sp.value;document.getElementById('spv').textContent=period+' s'};
+
+// sichqoncha/barmoq bilan aylantirish va zoom
+let drag=false,lx=0,ly=0;
+canvas.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointerup',()=>drag=false);
+canvas.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  root.rotation.y+=(e.clientX-lx)*0.01; root.rotation.x+=(e.clientY-ly)*0.01;
+  root.rotation.x=Math.max(-1.5,Math.min(1.5,root.rotation.x));
+  lx=e.clientX;ly=e.clientY;
+});
+canvas.addEventListener('wheel',e=>{e.preventDefault();camera.position.z=Math.max(5,Math.min(16,camera.position.z+e.deltaY*0.01))},{passive:false});
+
+function resize(){
+  const w=innerWidth,h=innerHeight;
+  renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+addEventListener('resize',resize); resize();
+
+const clock=new THREE.Clock();
+(function loop(){
+  const dt=clock.getDelta();
+  if(auto && !drag) root.rotation.y += (Math.PI*2/period)*dt; // to'liq 360° = 2π
+  shells.forEach(s=>s.rotateOnAxis(s.userData.axis,s.userData.w*dt));
+  renderer.render(scene,camera);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
